@@ -1,0 +1,21 @@
+
+syntax = "proto3";
+
+package mpc;
+import "mmsg.proto";
+
+service Mpc {
+  rpc send(mmsg.Message) returns (MpcReply) {}
+}
+
+message MpcReply {
+    MpcReplyCode code = 1;
+    string msg = 2;
+    bytes context = 3;
+}
+
+enum MpcReplyCode {
+    Ok = 0;
+    ERR = 1;
+  }
+
