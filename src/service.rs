@@ -29,17 +29,24 @@ impl RaftContext {
 
 pub trait RaftService {
 
+    /// Try to get a message.
     fn recv(&mut self) -> Result<Msg, TryRecvError>;
 
+    /// Send a message.
     fn send(&mut self, msg: Msg);
 
+    /// Update RaftContext in a tick.
     fn update_context(&mut self, ctx: RaftContext);
 
+    /// Get RaftContext.
     fn context(&mut self) -> RaftContext;
 
+    /// Propose. `cmd` is a flag of the proposal. `callback` is a function stored by user itself. You can use it in method `on_committed`.
     fn propose(&mut self, cmd: i32, data: &Vec<u8>, callback: Option<ProposeCallback>) -> Result<(), RaftError>;
 
+    /// Propose a ConfChange.
     fn propose_conf_change(&mut self, cc: ConfChange) -> Result<(), RaftError>;
 
+    /// Calling on committed of a proposal.
     fn on_committed(&mut self, data: &Vec<u8>);
 }
