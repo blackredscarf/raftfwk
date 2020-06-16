@@ -24,14 +24,14 @@ pub struct Command {
 }
 
 impl Command {
-    pub fn new_add_follower(id: u64, port: u16) -> Self {
-        Command { id, port, command: CommandType::AddFollower, host: None }
+    pub fn new_join(id: u64, port: u16) -> Self {
+        Command { id, port, command: CommandType::Join, host: None }
     }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum CommandType {
-    AddFollower = 0
+    Join = 0
 }
 
 #[derive(Debug)]

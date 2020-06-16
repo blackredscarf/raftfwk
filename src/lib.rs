@@ -73,7 +73,7 @@ impl <T: RaftStorage> RaftServer<T> {
 
         let last_applied = match storage.last_index() {
             Ok(v) => v,
-            Err(_) => 0
+            Err(e) => panic!(e)
         };
 
         let cfg = Config {
@@ -134,7 +134,7 @@ impl <T: RaftStorage> RaftServer<T> {
                     },
                     Ok(Msg::Command(cmd)) => {
                         match cmd.command {
-                            CommandType::AddFollower => {
+                            CommandType::Join => {
                                 if let Some(host) = cmd.host {
                                     let addr = format!("{}:{}", host, cmd.port);
                                     self.add_follower(cmd.id, &addr);
@@ -248,17 +248,10 @@ impl <T: RaftStorage> RaftServer<T> {
     }
 
     fn join(&mut self) {
-        let cmd = Command::new_add_follower(self.id, self.port);
-        let bs = match bincode::serialize(&cmd) {
-            Ok(v) => v,
-            Err(e) => {
-                error!(self.logger, "MkvCommand serialize error: {}", e);
-                return;
-            }
-        };
+        let cmd = Command::new_join(self.id, self.port);
 
         let mut msg = Message::default();
-        msg.set_context(bs);
+        msg.set_context(bincode::serialize(&cmd).unwrap());
         let client = create_rpc_client(&self.cluster);
         match client.send(&msg) {
             Ok(res) => {
@@ -281,7 +274,6 @@ impl <T: RaftStorage> RaftServer<T> {
     }
 
     fn add_follower(&mut self, id: u64, addr: &String) {
-        debug!(self.logger, "Join cluster {}", addr);
         let mut cc = ConfChange::default();
         cc.node_id = id;
         cc.set_change_type(ConfChangeType::AddNode);

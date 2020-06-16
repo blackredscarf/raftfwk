@@ -37,7 +37,7 @@ impl Mpc for MpcService {
 
         if let Ok(mut cmd) = bincode::deserialize::<Command>(&req.get_context()) {
             match cmd.command {
-                CommandType::AddFollower => {
+                CommandType::Join => {
                     let leader_id;
                     {
                         let meta_g = self.meta.read().unwrap();

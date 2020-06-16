@@ -8,10 +8,7 @@ pub trait RaftStorage: Storage {
 
     fn set_hardstate(&mut self, hs: HardState);
 
-    fn set_conf_state(
-        &mut self,
-        cs: ConfState
-    );
+    fn set_conf_state(&mut self, cs: ConfState);
 
     fn apply_snapshot(&mut self, snapshot: Snapshot) -> Result<()>;
 
