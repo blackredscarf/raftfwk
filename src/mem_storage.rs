@@ -64,10 +64,7 @@ impl RaftStorage for MemoryStorage {
         self.m.wl().set_hardstate(hs);
     }
 
-    fn set_conf_state(
-        &mut self,
-        cs: ConfState
-    ) {
+    fn set_conf_state(&mut self, cs: ConfState) {
         self.m.wl().set_conf_state(cs);
     }
 

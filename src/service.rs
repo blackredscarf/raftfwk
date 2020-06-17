@@ -6,6 +6,7 @@ use crate::msg::*;
 
 pub type ProposeCallback = Box<dyn Fn(Option<Vec<u8>>) + Send>;
 
+/// A Object contains status information of raft.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RaftContext {
     pub id: u64,
@@ -27,6 +28,7 @@ impl RaftContext {
     }
 }
 
+/// A trait for user to implement business logic.
 pub trait RaftService {
 
     /// Try to get a message.
@@ -41,7 +43,9 @@ pub trait RaftService {
     /// Get RaftContext.
     fn context(&mut self) -> RaftContext;
 
-    /// Propose. `cmd` is a flag of the proposal. `callback` is a function stored by user itself. You can use it in method `on_committed`.
+    /// Propose.
+    ///     - `cmd` is a flag of the proposal.
+    ///     - `callback` is a function stored by user itself. You can use it in method `on_committed`.
     fn propose(&mut self, cmd: i32, data: &Vec<u8>, callback: Option<ProposeCallback>) -> Result<(), RaftError>;
 
     /// Propose a ConfChange.
