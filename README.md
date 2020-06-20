@@ -1,9 +1,9 @@
 # RaftFwk
-A framework of distribution consensus algorithm [Raft](https://raft.github.io/raft.pdf) written in Rust. Implementing a sequence of tools based on library [tikv/raft-rs](https://github.com/tikv/raft-rs), including necessary user interfaces of a raft server, the network library of [grpc](https://github.com/tikv/grpc-rs) and log storage of [leveldb](https://docs.rs/rusty-leveldb).
+A framework of distribution consensus algorithm [Raft](https://raft.github.io/raft.pdf) written in Rust. Implementing a sequence of tools based on library [tikv/raft-rs](https://github.com/tikv/raft-rs), including necessary user interfaces of a raft server, the network library of [grpc](https://github.com/tikv/grpc-rs) and the log storage of [leveldb](https://docs.rs/rusty-leveldb).
 
 
 ## Installation
-You need to pay attention on the requirements of [tikv/grpc-rs](https://github.com/tikv/grpc-rs) which is a wrapper of [gRPC Core](https://github.com/grpc/grpc) that written in C. You can see the installation guide in its [README](https://github.com/tikv/grpc-rs#prerequisites). It seen that it on Windows only works for msvc compile version of Rust.
+You need to pay attention on the requirements of [tikv/grpc-rs](https://github.com/tikv/grpc-rs) which is a wrapper of [gRPC Core](https://github.com/grpc/grpc) written in C. You can see the installation guide in its [README](https://github.com/tikv/grpc-rs#prerequisites). It seen that it on Windows only works for msvc compile version of Rust.
 
 Adding the dependencies in Cargo.toml.
 ```
@@ -12,7 +12,8 @@ raftfwk = { git = "github.com/blackredscarf/raftfwk" }
 ```
 
 ## Usage
-See [examples/kv](https://github.com/blackredscarf/raftfwk/tree/master/examples/kv).
+See [tutorial](https://github.com/blackredscarf/raftfwk/tree/master/tutorial.md) and [examples/kv](https://github.com/blackredscarf/raftfwk/tree/master/examples/kv).
+
 
 ## References
 - [Raft paper](https://raft.github.io/raft.pdf)

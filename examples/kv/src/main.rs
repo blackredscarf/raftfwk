@@ -247,7 +247,7 @@ fn main() {
         let mut r = RaftServer::new(logger.clone(), config, storage, service.clone());
         r.run();
     } else {
-        let storage= create_leveldb_storage(format!("db{}", args.id), logger.clone());
+        let storage = create_leveldb_storage(format!("db{}", args.id), logger.clone());
         let config = RaftConfig::join(args.id, args.port, args.cluster);
         let mut r = RaftServer::new(logger.clone(), config, storage, service.clone());
         r.run();
