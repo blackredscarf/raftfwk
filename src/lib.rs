@@ -13,6 +13,7 @@ pub mod logger;
 pub mod storage;
 pub mod conf;
 pub mod mem_storage;
+pub mod level_storage;
 
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::sync::{mpsc, Arc, RwLock, Mutex};
@@ -41,6 +42,39 @@ use crate::service::*;
 use crate::storage::RaftStorage;
 use crate::msg::{Msg, CommandType, Command};
 
+pub struct RaftConfig {
+    id: u64,
+    port: u16,
+    election_tick: usize,
+    heartbeat_tick: usize,
+    cluster: Option<String>,
+    pre_vote: bool,
+}
+
+impl RaftConfig {
+    pub fn simple(id: u64, port: u16) -> Self {
+        RaftConfig {
+            id,
+            port,
+            election_tick: 10,
+            heartbeat_tick: 3,
+            cluster: None,
+            pre_vote: false
+        }
+    }
+
+    pub fn join(id: u64, port: u16, cluster: Option<String>) -> Self {
+        RaftConfig {
+            id,
+            port,
+            election_tick: 10,
+            heartbeat_tick: 3,
+            cluster: cluster,
+            pre_vote: false
+        }
+    }
+
+}
 
 pub struct RaftServer<T: RaftStorage> {
     id: u64,
@@ -54,12 +88,15 @@ pub struct RaftServer<T: RaftStorage> {
     peers: HashMap<u64, String>,
     mpc_server: MpcServer,
     clients: HashMap<u64, MpcClient>,
+
+    snapshot_index: u64,
+    applied_index: u64
 }
 
 impl <T: RaftStorage> RaftServer<T> {
-    pub fn new(logger: Logger, id: u64, port: u16, storage: T, cluster: Option<String>, service: Arc<Mutex<dyn RaftService+Send>>) -> Self {
+    pub fn new(logger: Logger, params: RaftConfig, storage: T, service: Arc<Mutex<dyn RaftService+Send>>) -> Self {
 
-        let cluster = match cluster {
+        let cluster = match params.cluster {
             Some(v) => {
                 if !kit::check_addr(&v) {
                     panic!("Cluster format error. It should be like 0.0.0.0:8060");
@@ -67,19 +104,17 @@ impl <T: RaftStorage> RaftServer<T> {
                 v
             },
             None => {
+                storage.initialize_with_conf_state(ConfState::from((vec![params.id], vec![])));
                 String::from("")
             }
         };
 
-        let last_applied = match storage.last_index() {
-            Ok(v) => v,
-            Err(e) => panic!(e)
-        };
-
+        let last_applied = storage.hard_state().commit;
         let cfg = Config {
-            id: id,
-            election_tick: 10,
-            heartbeat_tick: 3,
+            id: params.id,
+            election_tick: params.election_tick,
+            heartbeat_tick: params.heartbeat_tick,
+            pre_vote: params.pre_vote,
             max_size_per_msg: 1024 * 1024 * 1024,
             max_inflight_msgs: 256,
             applied: last_applied,
@@ -89,14 +124,14 @@ impl <T: RaftStorage> RaftServer<T> {
         let r = RawNode::new(&cfg, storage, &logger).unwrap();
 
         let meta = Arc::new(RwLock::new(ServerMeta::default()));
-        let mpc_server = MpcServer::new(logger.clone(), id, port, meta.clone(), service.clone(), 1);
+        let mpc_server = MpcServer::new(logger.clone(), params.id, params.port, meta.clone(), service.clone(), 1);
 
         let mut peers = HashMap::new();
-        peers.insert(id, format!("127.0.0.1:{}", port));
+        peers.insert(params.id, format!("127.0.0.1:{}", params.port));
 
         RaftServer {
-            id,
-            port,
+            id: params.id,
+            port: params.port,
             cluster,
             logger,
             r,
@@ -104,7 +139,9 @@ impl <T: RaftStorage> RaftServer<T> {
             mpc_server,
             peers,
             meta,
-            context: RaftContext::new(id),
+            snapshot_index: last_applied,
+            applied_index: last_applied,
+            context: RaftContext::new(params.id),
             clients: HashMap::new(),
         }
     }
@@ -219,10 +256,12 @@ impl <T: RaftStorage> RaftServer<T> {
                     let node_addr = String::from_utf8(cc.get_context().to_vec());
                     match cc.get_change_type() {
                         ConfChangeType::AddNode => {
-                            match self.r.raft.add_node(node_id) {
-                                Ok(v) => (),
-                                Err(e) => warn!(self.logger, "{}", e)
-                            };
+                            if let None = self.r.raft.prs().get(node_id) {
+                                match self.r.raft.add_node(node_id) {
+                                    Ok(v) => (),
+                                    Err(e) => warn!(self.logger, "{}", e)
+                                };
+                            }
                             self.peers.insert(node_id, node_addr.unwrap());
                         },
                         ConfChangeType::RemoveNode => {
@@ -241,10 +280,24 @@ impl <T: RaftStorage> RaftServer<T> {
                     debug!(self.logger, "Commit");
                     self.service.lock().unwrap().on_committed(&entry.data);
                 }
+                self.applied_index = entry.index;
             }
         }
-
+        self.maybe_snapshot();
         self.r.advance(ready);
+    }
+
+    fn maybe_snapshot(&mut self) {
+        if self.applied_index - self.snapshot_index <= 3 {
+            return;
+        }
+        if let Ok(snap) = self.r.mut_store().snapshot(self.applied_index) {
+            self.r.mut_store().apply_snapshot(snap);
+            self.snapshot_index = self.applied_index;
+            info!(self.logger, "Apply snapshot");
+        } else {
+            warn!(self.logger, "Cannot save the snapshot");
+        }
     }
 
     fn join(&mut self) {

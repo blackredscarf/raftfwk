@@ -15,10 +15,7 @@ impl MemoryStorage {
         }
     }
 
-    pub fn new_with_conf_state<T>(conf_state: T) -> MemoryStorage
-        where
-            ConfState: From<T>
-    {
+    pub fn new_with_conf_state<T>(conf_state: T) -> MemoryStorage where ConfState: From<T> {
         MemoryStorage {
             m: MemStorage::new_with_conf_state(conf_state)
         }
@@ -53,9 +50,7 @@ impl Storage for MemoryStorage {
 
 impl RaftStorage for MemoryStorage {
 
-    fn initialize_with_conf_state<T>(&self, conf_state: T)
-        where
-            ConfState: From<T>
+    fn initialize_with_conf_state<T>(&self, conf_state: T) where ConfState: From<T>
     {
         self.m.initialize_with_conf_state(conf_state);
     }
@@ -64,10 +59,7 @@ impl RaftStorage for MemoryStorage {
         self.m.wl().set_hardstate(hs);
     }
 
-    fn set_conf_state(
-        &mut self,
-        cs: ConfState
-    ) {
+    fn set_conf_state(&mut self, cs: ConfState) {
         self.m.wl().set_conf_state(cs);
     }
 
@@ -75,7 +67,7 @@ impl RaftStorage for MemoryStorage {
         self.m.wl().apply_snapshot(snapshot)
     }
 
-    fn hard_state(&mut self) -> HardState {
+    fn hard_state(&self) -> HardState {
         self.m.wl().mut_hard_state().clone()
     }
 
@@ -93,10 +85,7 @@ impl RaftStorage for MemoryStorage {
 }
 
 
-pub fn create_memory_storage(id: Option<u64>) -> MemoryStorage {
-    if let Some(id) = id {
-        return MemoryStorage::new_with_conf_state(ConfState::from((vec![id], vec![])))
-    }
+pub fn create_memory_storage() -> MemoryStorage {
     MemoryStorage::new()
 }
 

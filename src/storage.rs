@@ -12,7 +12,7 @@ pub trait RaftStorage: Storage {
 
     fn apply_snapshot(&mut self, snapshot: Snapshot) -> Result<()>;
 
-    fn hard_state(&mut self) -> HardState;
+    fn hard_state(&self) -> HardState;
 
     fn commit_to(&mut self, index: u64) -> Result<()>;
 
