@@ -1,5 +1,5 @@
 # RaftFwk
-A framework of distribution consensus algorithm [Raft](https://raft.github.io/raft.pdf) written in Rust. Implementing a sequence of tools based on library [tikv/raft-rs](https://github.com/tikv/raft-rs), including necessary user interfaces of a raft server, the network library of [grpc](https://github.com/tikv/grpc-rs) and log storages.
+A framework of distribution consensus algorithm [Raft](https://raft.github.io/raft.pdf) written in Rust. Implementing a sequence of tools based on library [tikv/raft-rs](https://github.com/tikv/raft-rs), including necessary user interfaces of a raft server, the network library of [grpc](https://github.com/tikv/grpc-rs) and log storage of [leveldb](https://docs.rs/rusty-leveldb).
 
 
 ## Installation
@@ -19,6 +19,6 @@ See [examples/kv](https://github.com/blackredscarf/raftfwk/tree/master/examples/
 - [tikv/raft-rs](https://github.com/tikv/raft-rs)
 - [tikv/grpc-rs](https://github.com/tikv/grpc-rs)
 - [gRPC Core](https://github.com/grpc/grpc)
-
+- [rusty-leveldb](https://docs.rs/rusty-leveldb)
 
 

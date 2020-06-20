@@ -13,14 +13,15 @@ use raftfwk::service::{ProposeCallback, RaftContext, RaftService};
 use raftfwk::conf::ConfChange;
 use raftfwk::logger::create_logger;
 use raftfwk::mem_storage::create_memory_storage;
-use raftfwk::RaftServer;
+use raftfwk::{RaftServer, RaftConfig};
+use raftfwk::level_storage::create_leveldb_storage;
+use raftfwk::storage::RaftStorage;
 
 use rand::{thread_rng, Rng};
 use slog::Logger;
 
 use structopt::StructOpt;
 use serde::{Deserialize, Serialize};
-
 
 pub struct KvService {
     callbacks: HashMap<String, ProposeCallback>,
@@ -136,6 +137,11 @@ struct Args {
     #[structopt(short="l", default_value="info")]
     log_level: String,
 
+    /// The method of saving logs, memory or leveldb.
+    #[structopt(short="s", default_value="memory")]
+    storage: String,
+
+    /// Specifying a cluster to join in. Giving the leader url like 168.192.32.108:8010.
     #[structopt(short="c")]
     cluster: Option<String>
 }
@@ -235,12 +241,15 @@ fn main() {
     let mut cli = KvCli::new(service.clone());
     start_cli(cli);
 
-    let storage = if args.cluster.is_some() {
-        create_memory_storage(None)
+    if &args.storage == "memory" {
+        let storage = create_memory_storage();
+        let config = RaftConfig::join(args.id, args.port, args.cluster);
+        let mut r = RaftServer::new(logger.clone(), config, storage, service.clone());
+        r.run();
     } else {
-        create_memory_storage(Some(args.id))
-    };
-
-    let mut r = RaftServer::new(logger.clone(), args.id, args.port, storage, args.cluster, service.clone());
-    r.run();
+        let storage= create_leveldb_storage(format!("db{}", args.id), logger.clone());
+        let config = RaftConfig::join(args.id, args.port, args.cluster);
+        let mut r = RaftServer::new(logger.clone(), config, storage, service.clone());
+        r.run();
+    }
 }
