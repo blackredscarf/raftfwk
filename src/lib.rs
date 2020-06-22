@@ -49,6 +49,7 @@ pub struct RaftConfig {
     heartbeat_tick: usize,
     cluster: Option<String>,
     pre_vote: bool,
+    snap_count: u64
 }
 
 impl RaftConfig {
@@ -59,7 +60,8 @@ impl RaftConfig {
             election_tick: 10,
             heartbeat_tick: 3,
             cluster: None,
-            pre_vote: false
+            pre_vote: false,
+            snap_count: 10
         }
     }
 
@@ -70,7 +72,8 @@ impl RaftConfig {
             election_tick: 10,
             heartbeat_tick: 3,
             cluster: cluster,
-            pre_vote: false
+            pre_vote: false,
+            snap_count: 10
         }
     }
 
@@ -90,7 +93,8 @@ pub struct RaftServer<T: RaftStorage> {
     clients: HashMap<u64, MpcClient>,
 
     snapshot_index: u64,
-    applied_index: u64
+    applied_index: u64,
+    snap_count: u64
 }
 
 impl <T: RaftStorage> RaftServer<T> {
@@ -139,6 +143,7 @@ impl <T: RaftStorage> RaftServer<T> {
             mpc_server,
             peers,
             meta,
+            snap_count: params.snap_count,
             snapshot_index: last_applied,
             applied_index: last_applied,
             context: RaftContext::new(params.id),
@@ -288,7 +293,7 @@ impl <T: RaftStorage> RaftServer<T> {
     }
 
     fn maybe_snapshot(&mut self) {
-        if self.applied_index - self.snapshot_index <= 3 {
+        if self.applied_index - self.snapshot_index <= self.snap_count {
             return;
         }
         if let Ok(snap) = self.r.mut_store().snapshot(self.applied_index) {
