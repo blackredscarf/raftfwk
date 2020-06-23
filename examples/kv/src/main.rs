@@ -22,6 +22,7 @@ use slog::Logger;
 
 use structopt::StructOpt;
 use serde::{Deserialize, Serialize};
+use rusty_leveldb::{DB, Options};
 
 pub struct KvService {
     callbacks: HashMap<String, ProposeCallback>,
@@ -29,19 +30,22 @@ pub struct KvService {
     receiver: Receiver<Msg>,
     logger: Logger,
     context: RaftContext,
-    kv: HashMap<String, Vec<u8>>
+    db: DB
 }
 
 impl KvService {
-    pub fn new(logger: Logger) -> Self {
+    pub fn new(id: u64, logger: Logger) -> Self {
         let (sender, receiver) = mpsc::channel();
+        let mut opt = Options::default();
+        opt.create_if_missing = true;
+        let db = DB::open(format!("db{}", id), opt).unwrap();
         KvService {
             logger,
             sender,
             receiver,
+            db,
             context: RaftContext::new(0),
             callbacks: HashMap::new(),
-            kv: HashMap::new()
         }
     }
 }
@@ -105,12 +109,13 @@ impl RaftService for KvService {
         let item: Item = bincode::deserialize(&proposal.2).unwrap();
         let cbo = self.callbacks.get(&proposal.0);
         if proposal.1 == 0 {
-            self.kv.insert(item.key, item.value);
+            self.db.put(item.key.as_bytes(), item.value.as_slice()).unwrap();
+            self.db.flush().unwrap();
             if let Some(cb) = cbo {
                 cb(None);
             }
         } else {
-            match self.kv.get(&item.key) {
+            match self.db.get(item.key.as_bytes()) {
                 Some(v) => {
                     if let Some(cb) = cbo {
                         cb(Some(v.clone()));
@@ -236,7 +241,7 @@ fn main() {
 
     let logger = create_logger(args.id, args.log_level);
 
-    let service = Arc::new(Mutex::new(KvService::new(logger.clone())));
+    let service = Arc::new(Mutex::new(KvService::new(args.id, logger.clone())));
 
     let mut cli = KvCli::new(service.clone());
     start_cli(cli);
@@ -247,7 +252,7 @@ fn main() {
         let mut r = RaftServer::new(logger.clone(), config, storage, service.clone());
         r.run();
     } else {
-        let storage = create_leveldb_storage(format!("db{}", args.id), logger.clone());
+        let storage = create_leveldb_storage(format!("log{}", args.id), logger.clone());
         let config = RaftConfig::join(args.id, args.port, args.cluster);
         let mut r = RaftServer::new(logger.clone(), config, storage, service.clone());
         r.run();
